@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from datetime import UTC, datetime
 
+from core.secret_filter import contains_sensitive_data
+
 MAX_MEMORY_CHARS = 5000
 
 
@@ -33,6 +35,11 @@ class LongTermMemory:
         """
         if len(content) > MAX_MEMORY_CHARS:
             raise LongTermMemoryError("Memory entry exceeds safe size limit")
+
+        if contains_sensitive_data(f"{title}\n{content}"):
+            raise LongTermMemoryError(
+                "Memory entry contains sensitive data and cannot be stored"
+            )
 
         data = self._read_entries()
 

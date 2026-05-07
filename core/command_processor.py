@@ -10,6 +10,7 @@ from core.file_reader import FileReadError, read_text_file
 from core.file_writer import FileWriteError, write_text_file
 from core.permissions import PermissionGate
 from core.sanitizer import sanitize_user_input
+from core.secret_filter import contains_sensitive_data, redact_sensitive_data
 from core.state import SystemState
 from core.workspace_guard import WORKSPACE_ROOT
 from memory.long_term import LongTermMemory
@@ -39,10 +40,12 @@ class CommandContext:
     last_activity: float = field(default_factory=time.time)
 
 
+
 def load_interpreter() -> Interpreter:
     from agent.interpreter import interpret
 
     return interpret
+
 
 
 def expire_session_if_needed(
@@ -56,6 +59,7 @@ def expire_session_if_needed(
         context.state.disable()
         output("[LOCK] Session expired. System DISABLED.")
         logger("Session timeout - system disabled")
+
 
 
 def process_command(
@@ -95,7 +99,7 @@ def process_command(
         return True
 
     context.last_command_time = now
-    logger(f"User command received: {cmd}")
+    logger(f"User command received: {redact_sensitive_data(cmd)}")
 
     try:
         lower_cmd = cmd.lower()
@@ -138,6 +142,7 @@ def process_command(
     return True
 
 
+
 def _handle_status_command(
     context: CommandContext,
     *,
@@ -154,6 +159,7 @@ def _handle_status_command(
         workspace_root=context.workspace_root,
         output=output,
     )
+
 
 
 def _handle_read_command(
@@ -184,6 +190,7 @@ def _handle_read_command(
     except FileReadError as exc:
         output(f"[ERROR] File read error: {exc}")
         logger(f"File read error: {exc}")
+
 
 
 def _handle_write_command(
@@ -230,6 +237,7 @@ def _handle_write_command(
         logger(f"File write error: {exc}")
 
 
+
 def _handle_ai_command(
     cmd: str,
     context: CommandContext,
@@ -268,6 +276,12 @@ def _handle_ai_command(
     context.short_memory.add("user", cmd)
     context.short_memory.add("assistant", reply)
 
+    memory_entry = f"USER: {cmd}\nAI: {reply}"
+    if contains_sensitive_data(memory_entry):
+        output("[DENIED] Memory save blocked because sensitive data was detected.")
+        logger("Memory save blocked due to sensitive data")
+        return
+
     save = context.permissions.request(
         "Do you want to save this interaction to long-term memory?"
     )
@@ -275,11 +289,10 @@ def _handle_ai_command(
     if save:
         context.long_memory.save(
             title="User Command",
-            content=f"USER: {cmd}\nAI: {reply}"
+            content=memory_entry,
         )
         output("[OK] Memory saved.")
         logger("Memory saved")
     else:
         output("[DENIED] Memory NOT saved.")
         logger("Memory save denied")
-

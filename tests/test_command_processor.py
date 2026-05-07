@@ -206,6 +206,49 @@ class CommandProcessorTests(unittest.TestCase):
         self.assertIn("[DENIED] AI request cancelled.", output)
         self.assertEqual(context.short_memory.count(), 0)
 
+    def test_ai_command_blocks_memory_save_for_sensitive_data(self):
+        long_memory = LongTermMemoryStub()
+        context = build_context(
+            permissions=PermissionStub(True),
+            long_memory=long_memory,
+        )
+        context.state.enable()
+        output = []
+        logs = []
+
+        def fake_loader():
+            return lambda _: "Here is a token: sk-testtoken1234567890abcdef"
+
+        process_command(
+            "Summarize the workspace",
+            context,
+            now=100,
+            output=output.append,
+            interpreter_loader=fake_loader,
+            logger=logs.append,
+        )
+
+        self.assertEqual(len(context.permissions.prompts), 1)
+        self.assertEqual(len(long_memory.saved_entries), 0)
+        self.assertIn("[DENIED] Memory save blocked because sensitive data was detected.", output)
+        self.assertIn("Memory save blocked due to sensitive data", logs)
+
+    def test_user_command_logging_redacts_sensitive_data(self):
+        context = build_context(permissions=PermissionStub(False))
+        context.state.enable()
+        logs = []
+
+        process_command(
+            "OPENROUTER_API_KEY=sk-testtoken1234567890abcdef",
+            context,
+            now=100,
+            output=lambda _: None,
+            logger=logs.append,
+        )
+
+        self.assertIn("OPENROUTER_API_KEY=[REDACTED]", logs[0])
+        self.assertNotIn("sk-testtoken1234567890abcdef", logs[0])
+
     def test_rate_limit_blocks_follow_up_command(self):
         context = build_context()
         context.state.enable()

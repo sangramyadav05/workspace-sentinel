@@ -10,6 +10,7 @@ from memory.long_term import (
 )
 
 
+
 def make_test_memory_path() -> Path:
     return Path("workspace") / "test_artifacts" / f"{uuid4().hex}.json"
 
@@ -39,6 +40,21 @@ class LongTermMemoryTests(unittest.TestCase):
 
             with self.assertRaises(LongTermMemoryError):
                 memory.save("Too big", "x" * (MAX_MEMORY_CHARS + 1))
+        finally:
+            with suppress(OSError):
+                memory_path.parent.rmdir()
+
+    def test_rejects_sensitive_entries(self):
+        memory_path = make_test_memory_path()
+
+        try:
+            memory = LongTermMemory(memory_path)
+
+            with self.assertRaises(LongTermMemoryError):
+                memory.save(
+                    "Sensitive",
+                    "OPENROUTER_API_KEY=sk-testtoken1234567890abcdef",
+                )
         finally:
             with suppress(OSError):
                 memory_path.parent.rmdir()
