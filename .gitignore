@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+venv/
+__pycache__/
+*.pyc
+*.pyc.*
+*.pyo
+*.log
+.coverage
+.pytest_cache/
+memory/data/
+workspace/*
+!workspace/.gitkeep
