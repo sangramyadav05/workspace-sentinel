@@ -139,7 +139,7 @@ class CommandProcessorTests(unittest.TestCase):
     def test_ai_command_can_save_memory_without_network(self):
         long_memory = LongTermMemoryStub()
         context = build_context(
-            permissions=PermissionStub(True),
+            permissions=PermissionStub(True, True),
             long_memory=long_memory,
         )
         context.state.enable()
@@ -165,9 +165,11 @@ class CommandProcessorTests(unittest.TestCase):
         self.assertEqual(len(long_memory.saved_entries), 1)
         self.assertIn("safe reply", long_memory.saved_entries[0]["content"])
         self.assertIn("[OK] Memory saved.", output)
+        self.assertIn("external AI service", context.permissions.prompts[0])
+        self.assertIn("long-term memory", context.permissions.prompts[1])
 
     def test_ai_command_reports_missing_configuration(self):
-        context = build_context()
+        context = build_context(permissions=PermissionStub(True))
         context.state.enable()
         output = []
 
@@ -184,6 +186,24 @@ class CommandProcessorTests(unittest.TestCase):
         )
 
         self.assertIn("[ERROR] OPENROUTER_API_KEY is not set.", output)
+        self.assertEqual(context.short_memory.count(), 0)
+
+    def test_ai_command_requires_outbound_approval(self):
+        context = build_context(permissions=PermissionStub(False))
+        context.state.enable()
+        output = []
+
+        with patch("core.command_processor.load_interpreter") as loader:
+            process_command(
+                "Explain this",
+                context,
+                now=100,
+                output=output.append,
+                logger=lambda _: None,
+            )
+
+        loader.assert_not_called()
+        self.assertIn("[DENIED] AI request cancelled.", output)
         self.assertEqual(context.short_memory.count(), 0)
 
     def test_rate_limit_blocks_follow_up_command(self):

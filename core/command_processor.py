@@ -244,6 +244,15 @@ def _handle_ai_command(
         output("[WARN] Input flagged as suspicious.")
         logger("Suspicious input detected")
 
+    approve = context.permissions.request(
+        "Do you want to send this prompt to the external AI service?"
+    )
+
+    if not approve:
+        output("[DENIED] AI request cancelled.")
+        logger("AI request denied")
+        return
+
     try:
         interpret = interpreter_loader()
         reply = interpret(wrapped_cmd)
@@ -273,3 +282,4 @@ def _handle_ai_command(
     else:
         output("[DENIED] Memory NOT saved.")
         logger("Memory save denied")
+
