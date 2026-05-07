@@ -1,13 +1,12 @@
 from pathlib import Path
 
-
-# Absolute, resolved path to workspace
-WORKSPACE_ROOT = Path("workspace").resolve()
+from core.paths import WORKSPACE_ROOT
 
 
 class WorkspaceViolation(Exception):
     """Raised when an attempt is made to access files outside workspace."""
     pass
+
 
 
 def resolve_safe_path(relative_path: str) -> Path:

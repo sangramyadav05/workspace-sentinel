@@ -7,6 +7,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from core.dashboard import show_status
+from core.paths import MEMORY_FILE, PROJECT_ROOT
 from core.state import SystemState
 from core.workspace_guard import WORKSPACE_ROOT, WorkspaceViolation, resolve_safe_path
 from memory.short_term import ShortTermMemory
@@ -36,7 +37,7 @@ class DashboardTests(unittest.TestCase):
                 last_command_time=0,
                 min_interval=2,
                 short_memory=short_memory,
-                long_memory_path=Path("memory/data/user_memory.json"),
+                long_memory_path=MEMORY_FILE,
                 workspace_root=WORKSPACE_ROOT,
             )
 
@@ -55,7 +56,7 @@ class MainEntryTests(unittest.TestCase):
             input="EXIT\n",
             capture_output=True,
             text=True,
-            cwd=Path(__file__).resolve().parents[1],
+            cwd=PROJECT_ROOT,
             env=env,
             timeout=10,
             check=False,
@@ -64,6 +65,25 @@ class MainEntryTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("Workspace Sentinel (DISABLED)", result.stdout)
         self.assertIn("Exiting system.", result.stdout)
+
+    def test_main_uses_project_paths_when_started_from_parent_directory(self):
+        env = os.environ.copy()
+        env["OPENROUTER_API_KEY"] = ""
+
+        result = subprocess.run(
+            [sys.executable, str(PROJECT_ROOT / "main.py")],
+            input="ENABLE\nstatus\nEXIT\n",
+            capture_output=True,
+            text=True,
+            cwd=PROJECT_ROOT.parent,
+            env=env,
+            timeout=10,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("Workspace Sentinel (DISABLED)", result.stdout)
+        self.assertIn("Files present   : 1", result.stdout)
 
 
 if __name__ == "__main__":

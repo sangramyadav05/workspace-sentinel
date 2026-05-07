@@ -2,13 +2,10 @@ import json
 from pathlib import Path
 from datetime import UTC, datetime
 
+from core.paths import MEMORY_FILE
 from core.secret_filter import contains_sensitive_data
 
 MAX_MEMORY_CHARS = 5000
-
-
-# Location of long-term memory file
-MEMORY_FILE = Path("memory/data/user_memory.json")
 
 
 class LongTermMemoryError(RuntimeError):

@@ -8,6 +8,7 @@ from core.config import ConfigurationError
 from core.dashboard import show_status
 from core.file_reader import FileReadError, read_text_file
 from core.file_writer import FileWriteError, write_text_file
+from core.paths import MEMORY_FILE
 from core.permissions import PermissionGate
 from core.sanitizer import sanitize_user_input
 from core.secret_filter import contains_sensitive_data, redact_sensitive_data
@@ -23,7 +24,7 @@ Interpreter = Callable[[str], str]
 InterpreterLoader = Callable[[], Interpreter]
 Logger = Callable[[str], None]
 
-DEFAULT_LONG_MEMORY_PATH = Path("memory/data/user_memory.json")
+DEFAULT_LONG_MEMORY_PATH = MEMORY_FILE
 
 
 @dataclass

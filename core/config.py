@@ -1,11 +1,14 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+from core.paths import ENV_FILE
+
+load_dotenv(dotenv_path=ENV_FILE)
 
 
 class ConfigurationError(RuntimeError):
     """Raised when required local configuration is missing."""
+
 
 
 def get_openrouter_api_key() -> str:
